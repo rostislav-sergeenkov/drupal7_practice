@@ -1,0 +1,104 @@
+<?php
+
+/**
+ * @file
+ * This is drupal 7 practice module.
+ */
+
+define('PRACTICE_MAX_NODE_AMOUNT',5);
+
+define('PRACTICE_MAX_TITLE_LENGTH', 50);
+
+/**
+ * Implements hook_menu().
+ */
+function practice_menu() {
+  $items['admin/node-tittles'] = array(
+    'title' => 'Latest node\'s titles',
+    'description' => 'Form with 5 latest node\'s titles',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('practice_latest_nodes_form'),
+    'access callback' => TRUE,
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+/**
+ * Builds latest node form.
+ */
+function practice_latest_nodes_form($form, &$form_state) {
+  $nids = array_keys(db_select('node', 'n')
+    ->fields('n',array('nid'))
+    ->orderBy('nid','DESC')
+    ->range(0,PRACTICE_MAX_NODE_AMOUNT)
+    ->execute()
+    ->fetchAllAssoc('nid'));
+
+  $nodes = node_load_multiple($nids);
+
+  if ($nodes){
+    foreach ($nodes as $node){
+      $form['nodes'][$node->nid]['nid'] = array(
+        '#type' => 'html_tag',
+        '#tag' => 'h3',
+        '#value' => $node->nid,
+      );
+      $form['nodes'][$node->nid]['titles'] = array(
+        '#name' => 'titles[' . $node->nid . ']',
+        '#type' => 'textfield',
+        '#default_value' => $node->title,
+      );
+      $form['nodes'][$node->nid]['updated'] = array(
+        '#type' => 'html_tag',
+        '#tag' => 'h3',
+        '#value' => date('Y.m.d H:i:s', $node->changed),
+      );
+    }
+    $form['save_btn'] = array(
+      '#type' => 'submit',
+      '#value' => t('Save titles'),
+    );
+  }
+  else {
+    $form['warning'] = array(
+      '#type' => 'html_tag',
+      '#tag' => 'h2',
+      '#value' => t('Currently there are no nodes on the site'),
+    );
+  }
+
+  return $form;
+}
+
+function practice_latest_nodes_form_validate($form, &$form_state) {
+  $titles = $form_state['input']['titles'];
+  foreach ($titles as $title) {
+    if (mb_strlen($title) > PRACTICE_MAX_TITLE_LENGTH) {
+      form_set_error('title',
+        t('Title should be no longer than @length characters',
+          array('@length' => PRACTICE_MAX_TITLE_LENGTH)
+        )
+      );
+    }
+  }
+}
+
+function practice_latest_nodes_form_submit($form, &$form_state) {
+  $titles = $form_state['input']['titles'];
+
+  if ($titles){
+    $nids = array_keys($titles);
+    $nodes = node_load_multiple($nids);
+
+    if ($nodes){
+      foreach ($nodes as $nid => $node){
+        $titles[$nid] = trim($titles[$nid]);
+        if ($titles[$nid] !== $node->title && !empty($titles[$nid])){
+          $node->title = $titles[$nid];
+          node_save($node);
+        }
+      }
+    }
+  }
+}

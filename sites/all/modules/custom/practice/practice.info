@@ -1,0 +1,4 @@
+name = Practice
+description = "Drupal 7 practice module"
+core = 7.x
+package = practice
