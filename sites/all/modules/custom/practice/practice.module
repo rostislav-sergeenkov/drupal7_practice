@@ -5,8 +5,14 @@
  * This is drupal 7 practice module.
  */
 
+/**
+ * Represents max amount of latest nodes.
+ */
 define('PRACTICE_MAX_NODE_AMOUNT', 5);
 
+/**
+ * Represents max length of node title.
+ */
 define('PRACTICE_MAX_TITLE_LENGTH', 50);
 
 /**
