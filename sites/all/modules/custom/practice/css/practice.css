@@ -1,0 +1,6 @@
+tr.even{
+  background-color: rgba(0, 0, 255, 0.2) !important;
+}
+tr.odd{
+  background-color: rgba(0, 128, 0, 0.22) !important;
+}
