@@ -19,7 +19,7 @@ define('PRACTICE_MAX_TITLE_LENGTH', 50);
  * Implements hook_menu().
  */
 function practice_menu() {
-  $items['admin/node-tittles'] = array(
+  $items['admin/node-titles'] = array(
     'title' => 'Latest node\'s titles',
     'description' => 'Form with 5 latest node\'s titles',
     'page callback' => 'drupal_get_form',
