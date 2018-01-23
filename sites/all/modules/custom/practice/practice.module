@@ -35,7 +35,7 @@ function practice_menu() {
  */
 function practice_permission() {
   return array(
-    'access node tittle form' => array(
+    'access node title form' => array(
       'title' => t('Access node tittle form'),
       'description' => t('Access form with titles of latest 5 nodes.'),
     ),
@@ -103,7 +103,7 @@ function practice_latest_nodes_form_validate($form, &$form_state) {
     $titles[$id] = trim($title);
     if (!empty($titles[$id])) {
       if (mb_strlen($titles[$id]) > PRACTICE_MAX_TITLE_LENGTH) {
-        form_set_error('titles-' . $id,
+        form_set_error('titles][' . $id,
           t('Title for node @id is longer than @length characters',
             array(
               '@length' => PRACTICE_MAX_TITLE_LENGTH,
@@ -114,7 +114,7 @@ function practice_latest_nodes_form_validate($form, &$form_state) {
       }
     }
     else {
-      form_set_error('titles-' . $id,
+      form_set_error('titles][' . $id,
         t('Title for node @id is empty!',
           array(
             '@id' => $id,
@@ -164,11 +164,17 @@ function practice_theme($existing, $type, $theme, $path) {
 }
 
 /**
- * Implements hook_preprocess_HOOK().
+ * Renders form element.
  *
- * Prepossesses form so that it will have table markup.
+ * @param array $variables
+ *   An associative array containing:
+ *   - form: A render array contains from elements.
+ *     Properties used: nid.
+ *
+ * @return string
+ *   Result of render() function.
  */
-function practice_preprocess_practice_form_table(&$variables) {
+function theme_practice_form_table($variables) {
   $form = $variables['form'];
   $nids = unserialize($form['#nids']);
 
@@ -196,21 +202,5 @@ function practice_preprocess_practice_form_table(&$variables) {
     $form,
     $table,
   );
-
-  $variables['form'] = $output;
-}
-
-/**
- * Renders form element.
- *
- * @param array $variables
- *   An associative array containing:
- *   - form: A render array contains from elements.
- *     Properties used: nid.
- *
- * @return string
- *   Result of render() function.
- */
-function theme_practice_form_table($variables) {
-  return render($variables['form']);
+  return render($output);
 }
