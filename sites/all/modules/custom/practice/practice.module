@@ -1,0 +1,205 @@
+<?php
+
+/**
+ * @file
+ * This is drupal 7 practice module.
+ */
+
+/**
+ * Represents max amount of latest nodes.
+ */
+define('PRACTICE_MAX_NODE_AMOUNT', 5);
+
+/**
+ * Represents max length of node title.
+ */
+define('PRACTICE_MAX_TITLE_LENGTH', 50);
+
+/**
+ * Implements hook_menu().
+ */
+function practice_menu() {
+  $items['admin/node-titles'] = array(
+    'title' => 'Latest node\'s titles',
+    'description' => 'Form with 5 latest node\'s titles',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('practice_latest_nodes_form'),
+    'access arguments' => array('access node tittle form'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function practice_permission() {
+  return array(
+    'access node title form' => array(
+      'title' => t('Access node tittle form'),
+      'description' => t('Access form with titles of latest 5 nodes.'),
+    ),
+  );
+}
+
+/**
+ * Builds latest nodes form.
+ */
+function practice_latest_nodes_form($form, &$form_state) {
+  $nids = array_keys(db_select('node', 'n')
+    ->fields('n', array('nid'))
+    ->orderBy('nid', 'DESC')
+    ->range(0, PRACTICE_MAX_NODE_AMOUNT)
+    ->execute()
+    ->fetchAllAssoc('nid'));
+
+  $nodes = node_load_multiple($nids);
+
+  if ($nodes) {
+    $form['nodes']['titles']['#tree'] = TRUE;
+    foreach ($nodes as $node) {
+      $form['nodes']['nid'][$node->nid] = array(
+        '#type' => 'html_tag',
+        '#tag' => 'h3',
+        '#value' => $node->nid,
+      );
+      $form['nodes']['titles'][$node->nid] = array(
+        '#type' => 'textfield',
+        '#default_value' => $node->title,
+      );
+      $form['nodes']['updated'][$node->nid] = array(
+        '#type' => 'html_tag',
+        '#tag' => 'h3',
+        '#value' => date('Y.m.d H:i:s', $node->changed),
+      );
+    }
+
+    $form['save_btn'] = array(
+      '#type' => 'submit',
+      '#value' => t('Save titles'),
+    );
+
+    $form['#theme'] = 'practice_form_table';
+    $form['#nids'] = serialize($nids);
+  }
+  else {
+    $form['warning'] = array(
+      '#type' => 'html_tag',
+      '#tag' => 'h2',
+      '#value' => t('Currently there are no nodes on the site'),
+    );
+  }
+
+  return $form;
+}
+
+/**
+ * Performs validation for latest nodes form: checks title length.
+ */
+function practice_latest_nodes_form_validate($form, &$form_state) {
+  $titles = $form_state['values']['titles'];
+  foreach ($titles as $id => $title) {
+    $titles[$id] = trim($title);
+    if (!empty($titles[$id])) {
+      if (mb_strlen($titles[$id]) > PRACTICE_MAX_TITLE_LENGTH) {
+        form_set_error('titles][' . $id,
+          t('Title for node @id is longer than @length characters',
+            array(
+              '@length' => PRACTICE_MAX_TITLE_LENGTH,
+              '@id' => $id,
+            )
+          )
+        );
+      }
+    }
+    else {
+      form_set_error('titles][' . $id,
+        t('Title for node @id is empty!',
+          array(
+            '@id' => $id,
+          )
+        )
+      );
+    }
+  }
+}
+
+/**
+ * Performs latest nodes submit: updates nodes' titles.
+ */
+function practice_latest_nodes_form_submit($form, &$form_state) {
+  $titles = $form_state['values']['titles'];
+  if ($titles) {
+    $nids = array_keys($titles);
+    $nodes = node_load_multiple($nids);
+    if ($nodes) {
+      foreach ($nodes as $nid => $node) {
+        $titles[$nid] = trim($titles[$nid]);
+        if ($titles[$nid] !== $node->title) {
+          $node->title = $titles[$nid];
+          node_save($node);
+          drupal_set_message(t('Titile "@title" of node @nid updated',
+            array(
+              '@title' => $node->title,
+              '@nid' => $node->nid,
+            )
+            )
+          );
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function practice_theme($existing, $type, $theme, $path) {
+  return array(
+    'practice_form_table' => array(
+      'render element' => 'form',
+    ),
+  );
+}
+
+/**
+ * Renders form element.
+ *
+ * @param array $variables
+ *   An associative array containing:
+ *   - form: A render array contains from elements.
+ *     Properties used: nid.
+ *
+ * @return string
+ *   Result of render() function.
+ */
+function theme_practice_form_table($variables) {
+  $form = $variables['form'];
+  $nids = unserialize($form['#nids']);
+
+  $table = array(
+    '#theme' => 'table',
+    '#header' => array('node: nid', 'node: title', 'node: updated'),
+    '#rows' => array(),
+  );
+
+  foreach ($nids as $nid) {
+    $table['#rows'][] = array(
+      array('data' => $form['nodes']['nid'][$nid]),
+      array('data' => $form['nodes']['titles'][$nid]),
+      array('data' => $form['nodes']['updated'][$nid]),
+    );
+  }
+
+  $form['#attached']['css'] = array(
+    drupal_get_path('module', 'practice') . '/css/practice.css',
+  );
+  unset($form['nodes']);
+  unset($form['#theme']);
+
+  $output = array(
+    $form,
+    $table,
+  );
+  return render($output);
+}
